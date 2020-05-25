@@ -5635,40 +5635,6 @@ Descriptor desc;
     src = open('a.out.js').read()
     assert ' = f0;' in src or ' = f0,' in src
 
-  @no_wasm_backend('depends on merging asmjs')
-  def test_merge_pair(self):
-    def test(filename, full):
-      print('----', filename, full)
-      run_process([PYTHON, EMCC, path_from_root('tests', filename), '-O1', '-profiling', '-o', 'left.js', '-s', 'WASM=0'])
-      src = open('left.js').read()
-      create_test_file('right.js', src.replace('function _main() {', 'function _main() { out("replaced"); '))
-
-      self.assertContained('hello, world!', run_js('left.js'))
-      self.assertContained('hello, world!', run_js('right.js'))
-      self.assertNotContained('replaced', run_js('left.js'))
-      self.assertContained('replaced', run_js('right.js'))
-
-      n = src.count('function _')
-
-      def has(i):
-        run_process([PYTHON, path_from_root('tools', 'merge_pair.py'), 'left.js', 'right.js', str(i), 'out.js'])
-        return 'replaced' in run_js('out.js')
-
-      assert not has(0), 'same as left'
-      assert has(n), 'same as right'
-      assert has(n + 5), 'same as right, big number is still ok'
-
-      if full:
-        change = -1
-        for i in range(n):
-          if has(i):
-            change = i
-            break
-        assert change > 0 and change <= n
-
-    test('hello_world.cpp', True)
-    test('hello_libcxx.cpp', False)
-
   def test_emmake_emconfigure(self):
     def check(what, args, fail=True, expect=''):
       args = [PYTHON, path_from_root(what)] + args
